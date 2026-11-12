@@ -74,7 +74,7 @@ for(const s of [-1,1]){sphere(groups.muscular,muscle2,[s*.28,1.88,.1],[.23,.35,.
 sphere(groups.circulatory,red,[0,1.55,.36],[.14,.19,.11]);cyl(groups.circulatory,red,[0,2.2,.24],[0,1.7,.3],.045,.035);cyl(groups.circulatory,blue,[0,2.12,.2],[0,1.5,.3],.04,.03);
 for(const s of [-1,1]){sphere(groups.respiratory,lung,[s*.25,1.72,.23],[.22,.38,.14]);}
 cyl(groups.respiratory,nerve,[0,2.28,.2],[0,1.95,.2],.055,.055);
-sphere(groups.digestive,organ,[0,1.17,.31],[.19,.21,.12]);sphere(groups.digestive,dark,[.2,1.33,.2],[.25,.13,.1]);for(let i=0;i<4;i++){const y=.88-i*.09;const curve=sphere(groups.digestive,lung,[0,y,.34],[.22,.035,.055]);curve.rotation.z=i%2?.12:-.12}
+sphere(groups.digestive,organ,[0,1.17,.31],[.19,.21,.12]);sphere(groups.digestive,dark,[-.22,1.29,.32],[.25,.13,.09]);for(let i=0;i<5;i++){const y=.94-i*.075;const loop=sphere(groups.digestive,lung,[i%2===0?-.08:.08,y,.36],[.18,.035,.055]);loop.rotation.z=i%2?.22:-.22}sphere(groups.digestive,dark,[.2,1.33,.2],[.25,.13,.1]);for(let i=0;i<4;i++){const y=.88-i*.09;const curve=sphere(groups.digestive,lung,[0,y,.34],[.22,.035,.055]);curve.rotation.z=i%2?.12:-.12}
 cyl(groups.nervous,nerve,[0,2.58,.02],[0,-.1,.05],.035,.025);sphere(groups.nervous,nerve,[0,2.61,.03],[.23,.23,.2]);for(const s of [-1,1]){cyl(groups.nervous,nerve,[0,1.5,.08],[s*.8,1.1,.08],.015,.01);cyl(groups.nervous,nerve,[0,.4,.08],[s*.33,-2.2,.08],.014,.009)}
 // Invisible anatomical hit areas make the visible structures selectable.
 const hitMaterial=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});
