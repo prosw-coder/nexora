@@ -55,6 +55,14 @@ sphere(groups.all,skin,[0,2.58,0],[.39,.48,.34]);sphere(groups.all,skin,[0,2.02,
 sphere(groups.all,skin,[0,1.2,0],[.67,.86,.34]);sphere(groups.all,skin,[0,.23,0],[.38,.55,.29]);sphere(groups.all,skin,[0,-.28,0],[.42,.23,.3]);
 for(const s of [-1,1]){sphere(groups.all,skin,[s*.79,1.28,0],[.19,.2,.2]);limb(groups.all,skin,[s*.82,1.2,0],[s*1.02,.12,.02],.16);limb(groups.all,skin,[s*1.02,.12,.02],[s*1.08,-.62,.04],.12);sphere(groups.all,skin,[s*1.08,-.73,.05],[.13,.18,.1]);limb(groups.all,skin,[s*.27,-.42,0],[s*.32,-1.32,.02],.2);limb(groups.all,skin,[s*.32,-1.32,.02],[s*.34,-2.25,.08],.13);sphere(groups.all,skin,[s*.34,-2.38,.17],[.16,.12,.3]);}
 sphere(groups.all,skin,[0,2.95,0],[.14,.15,.15]);
+// Visible educational organ layer on the full-body view (illustrative, not diagnostic).
+sphere(groups.all,nerve,[0,2.61,.30],[.22,.22,.16]);
+sphere(groups.all,lung,[-.22,1.76,.34],[.19,.32,.11]);sphere(groups.all,lung,[.22,1.76,.34],[.19,.32,.11]);
+sphere(groups.all,red,[0,1.53,.48],[.13,.17,.10]);
+sphere(groups.all,dark,[-.22,1.29,.38],[.25,.13,.09]);
+sphere(groups.all,organ,[.18,1.20,.43],[.17,.19,.10]);
+for(const side of [-1,1])sphere(groups.all,blue,[side*.23,.78,.37],[.09,.16,.08]);
+for(let i=0;i<5;i++){const y=.94-i*.075;const loop=sphere(groups.all,lung,[i%2===0?-.08:.08,y,.43],[.18,.035,.055]);loop.rotation.z=i%2?.22:-.22}
 // Skeletal model
 sphere(groups.skeleton,bone,[0,2.6,0],[.25,.31,.23]);cyl(groups.skeleton,bone,[0,2.25,0],[0,.7,0],.13,.17);sphere(groups.skeleton,bone,[0,.2,0],[.32,.38,.24]);
 for(let i=0;i<12;i++){let y=1.9-i*.105;let w=.36+Math.sin(i/12*Math.PI)*.15;for(const s of [-1,1]){const rib=sphere(groups.skeleton,bone,[s*w*.55,y,.04],[w*.58,.045,.055]);rib.rotation.z=s*-.23;cyl(groups.skeleton,bone,[s*.12,y,0],[s*w,y-.07,.02],.035,.025)}}
@@ -80,6 +88,9 @@ const anatomy={
   lungs:{ar:["الرئتان","Lungs","عضوان إسفنجيان يحدث فيهما تبادل الغازات؛ ينتقل الأكسجين إلى الدم ويخرج ثاني أكسيد الكربون."],en:["Lungs","Pulmones","Spongy organs where gas exchange occurs: oxygen enters the blood and carbon dioxide is removed."],icon:"🫁"},
   brain:{ar:["الدماغ","Brain","مركز التحكم الرئيس في الجهاز العصبي؛ يعالج المعلومات وينظم كثيرًا من وظائف الجسم."],en:["Brain","Encephalon","The main control center of the nervous system, processing information and regulating many body functions."],icon:"🧠"},
   stomach:{ar:["المعدة","Stomach","عضو عضلي يخلط الطعام بالعصارات الهضمية ويساعد على بدء هضم البروتينات."],en:["Stomach","Gaster","A muscular organ that mixes food with digestive juices and helps begin protein digestion."],icon:"〰️"},
+  liver:{ar:["الكبد","Liver","الكبد عضو كبير يؤدي وظائف أساسية، منها معالجة المغذيات وإنتاج العصارة الصفراوية والمساهمة في إزالة السموم."],en:["Liver","Hepar","The liver performs essential functions including nutrient processing, bile production and detoxification."],icon:"🟤"},
+  kidneys:{ar:["الكليتان","Kidneys","ترشح الكليتان الدم لإزالة الفضلات وتنظيم توازن الماء والأملاح وإنتاج البول."],en:["Kidneys","Renes","The kidneys filter blood, remove waste, regulate fluid and electrolyte balance, and produce urine."],icon:"🫘"},
+  intestines:{ar:["الأمعاء","Intestines","تُكمل الأمعاء عملية الهضم وتمتص معظم العناصر الغذائية والماء، وتضم الأمعاء الدقيقة والغليظة."],en:["Intestines","Intestina","The intestines complete digestion and absorb most nutrients and water; they include the small and large intestines."],icon:"〰️"},
   skeleton:{ar:["الهيكل العظمي","Skeleton","يوفر الدعامة والحماية ويسهم في الحركة، كما يحتوي نخاع العظم الذي ينتج خلايا الدم."],en:["Skeleton","Systema skeletale","Provides support and protection, contributes to movement, and houses marrow that produces blood cells."],icon:"🦴"},
   muscles:{ar:["العضلات الهيكلية","Skeletal muscles","تتصل كثير من العضلات بالعظام وتولد القوة اللازمة للحركة والمحافظة على وضعية الجسم."],en:["Skeletal muscles","Musculi skeletales","Many skeletal muscles attach to bones and generate the force needed for movement and posture."],icon:"💪"}
 };
@@ -87,6 +98,11 @@ hotspot(groups.all,"all","heart",[0,1.55,.42],[.27,.3,.24],anatomy.heart);
 hotspot(groups.all,"all","lungs",[0,1.73,.25],[.58,.48,.22],anatomy.lungs);
 hotspot(groups.all,"all","brain",[0,2.61,.08],[.3,.3,.24],anatomy.brain);
 hotspot(groups.all,"all","stomach",[0,1.15,.4],[.3,.3,.2],anatomy.stomach);
+hotspot(groups.all,"all","liver",[-.22,1.29,.52],[.28,.17,.13],anatomy.liver);
+hotspot(groups.all,"all","kidneys",[0,.78,.49],[.42,.22,.12],anatomy.kidneys);
+hotspot(groups.all,"all","intestines",[0,.79,.54],[.25,.24,.13],anatomy.intestines);
+hotspot(groups.digestive,"digestive","liver",[-.22,1.29,.52],[.28,.17,.13],anatomy.liver);
+hotspot(groups.digestive,"digestive","intestines",[0,.79,.54],[.25,.24,.13],anatomy.intestines);
 hotspot(groups.skeleton,"skeleton","skeleton",[0,.2,.02],[.48,1.5,.3],anatomy.skeleton);
 hotspot(groups.muscular,"muscular","muscles",[0,1.25,.35],[.65,.95,.25],anatomy.muscles);
 hotspot(groups.circulatory,"circulatory","heart",[0,1.55,.5],[.23,.26,.2],anatomy.heart);
@@ -126,7 +142,7 @@ canvas.addEventListener('click',event=>{
   document.querySelector('#organIcon').textContent=d.icon;
   document.querySelector('#organTag').textContent=english?'SELECTED ORGAN':'عضو محدد';
   document.querySelector('#detailsHint').textContent=english?'Selected anatomical structure':'العضو الذي تم اختياره';
-  toast(english?'Selected: '+d[1][0]:'تم تحديد: '+d[0][0]);
+  toast(english?'Selected: '+d.en[0]:'تم تحديد: '+d.ar[0]);
 });
 
 function applyGenderShape(){groups.all.children.forEach(mesh=>{if(!mesh.userData.bodySurface||!mesh.userData.baseScale)return;const y=mesh.position.y,x=mesh.position.x;let width=1;if(y>.85&&y<1.65)width=gender==='female'?(Math.abs(x)<.1?.91:.94):1;if(y>-.05&&y<.55)width=gender==='female'?1.16:1;if(y<-.35&&y>-1.5)width=gender==='female'?1.04:1;mesh.scale.x=mesh.userData.baseScale.x*width;});}
