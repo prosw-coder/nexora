@@ -46,7 +46,7 @@ scene.add(new THREE.HemisphereLight(0xffffff,0xb7c3ca,2));const key=new THREE.Di
 const root=new THREE.Group();scene.add(root);const groups={all:new THREE.Group(),skeleton:new THREE.Group(),muscular:new THREE.Group(),circulatory:new THREE.Group(),respiratory:new THREE.Group(),digestive:new THREE.Group(),nervous:new THREE.Group()};Object.values(groups).forEach(g=>root.add(g));
 const mat=(color,roughness=.7,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 const skin=mat('#d6b39c'),skin2=mat('#c99e87'),bone=mat('#e8ddc8'),muscle=mat('#a95e5d'),muscle2=mat('#c47a72'),red=mat('#bd5258'),blue=mat('#547fa1'),organ=mat('#a85f58'),lung=mat('#d58d8b'),nerve=mat('#e2b65f'),dark=mat('#a98c73');
-function add(group,geometry,material,pos,scale,rot){const m=new THREE.Mesh(geometry,material);m.position.set(...pos);if(scale)m.scale.set(...scale);if(rot)m.rotation.set(...rot);m.castShadow=true;m.receiveShadow=true;group.add(m);return m}
+function add(group,geometry,material,pos,scale,rot){const m=new THREE.Mesh(geometry,material);m.position.set(...pos);if(scale){m.scale.set(...scale);m.userData.baseScale=m.scale.clone()}if(material===skin)m.userData.bodySurface=true;if(rot)m.rotation.set(...rot);m.castShadow=true;m.receiveShadow=true;group.add(m);return m}
 function sphere(g,m,p,s){return add(g,new THREE.SphereGeometry(1,24,18),m,p,s)}
 function cyl(g,m,a,b,r1,r2){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),d=B.clone().sub(A);const mesh=add(g,new THREE.CylinderGeometry(r2,r1,d.length(),16),m,A.clone().add(B).multiplyScalar(.5).toArray());mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return mesh}
 function limb(g,m,a,b,r){return cyl(g,m,a,b,r,r*.82)}
@@ -107,8 +107,10 @@ nervous:{ar:['الجهاز العصبي','Nervous system','ينسق الجهاز
 };
 function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key);document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;}
 document.querySelectorAll('.system').forEach(b=>b.addEventListener('click',()=>setSystem(b.dataset.system)));
-const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerDown=null;
+canvas.addEventListener('pointerdown',event=>{pointerDown={x:event.clientX,y:event.clientY};});
 canvas.addEventListener('click',event=>{
+  if(pointerDown&&Math.hypot(event.clientX-pointerDown.x,event.clientY-pointerDown.y)>7){pointerDown=null;return;}pointerDown=null;
   const rect=canvas.getBoundingClientRect();
   pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
   pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
@@ -127,7 +129,8 @@ canvas.addEventListener('click',event=>{
   toast(english?'Selected: '+d[1][0]:'تم تحديد: '+d[0][0]);
 });
 
-document.querySelectorAll('[data-gender]').forEach(b=>b.addEventListener('click',()=>{gender=b.dataset.gender;document.querySelectorAll('[data-gender]').forEach(x=>x.classList.toggle('active',x===b));toast(english?'Male/female anatomical differences are not modeled yet.':'اختيار الجنس واجهة تمهيدية؛ الاختلافات التشريحية بين النموذجين لم تُنفذ بعد.');}));
+function applyGenderShape(){groups.all.children.forEach(mesh=>{if(!mesh.userData.bodySurface||!mesh.userData.baseScale)return;const y=mesh.position.y,x=mesh.position.x;let width=1;if(y>.85&&y<1.65)width=gender==='female'?(Math.abs(x)<.1?.91:.94):1;if(y>-.05&&y<.55)width=gender==='female'?1.16:1;if(y<-.35&&y>-1.5)width=gender==='female'?1.04:1;mesh.scale.x=mesh.userData.baseScale.x*width;});}
+document.querySelectorAll('[data-gender]').forEach(b=>b.addEventListener('click',()=>{gender=b.dataset.gender;document.querySelectorAll('[data-gender]').forEach(x=>x.classList.toggle('active',x===b));applyGenderShape();toast(english?(gender==='female'?'Female body shape selected':'Male body shape selected'):(gender==='female'?'تم اختيار هيئة الجسم الأنثوية':'تم اختيار هيئة الجسم الذكورية'));}));
 function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(canvas);resize();
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
 document.querySelector('#zoomIn').onclick=()=>camera.position.multiplyScalar(.88);document.querySelector('#zoomOut').onclick=()=>camera.position.multiplyScalar(1.12);document.querySelector('#home').onclick=()=>{camera.position.set(0,1.35,8.7);controls.target.set(0,.2,0)};document.querySelector('#reset').onclick=()=>{root.rotation.set(0,0,0);camera.position.set(0,1.35,8.7);controls.target.set(0,.2,0);setSystem('all')};
