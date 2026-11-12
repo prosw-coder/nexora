@@ -33,7 +33,7 @@
 <aside class="panel right-panel"><h2 class="panel-title" id="detailsTitle">دليل التشريح</h2><p class="panel-hint" id="detailsHint">معلومات عن النموذج المعروض</p><div class="organ-card"><div class="organ-top"><div class="organ-icon" id="organIcon">🫀</div><span class="tag" id="organTag">OVERVIEW</span></div><h3 id="organName">جسم الإنسان</h3><div class="latin" id="organLatin">Homo sapiens</div><p id="organDescription">يتكون جسم الإنسان من أجهزة مترابطة تعمل معًا للحفاظ على الوظائف الحيوية. اختر أحد الأجهزة لاستكشاف مكوناته.</p></div><div><div class="section-label" id="quickFacts">QUICK FACTS</div><div class="info-row"><span id="fact1">عدد الأجهزة</span><span id="fact1v">11 جهازًا</span></div><div class="info-row"><span id="fact2">عدد العظام لدى البالغ</span><span id="fact2v">206</span></div><div class="info-row"><span id="fact3">نوع العرض</span><span id="fact3v">تفاعلي 3D</span></div><button class="action-btn" id="learnMore">استكشف المزيد من المعلومات ↗</button></div></aside>
 </main>
 <div class="lesson-overlay" id="lessonOverlay" role="dialog" aria-modal="true" aria-labelledby="lessonTitle" hidden><section class="lesson-modal"><button class="lesson-close" id="lessonClose" aria-label="Close">×</button><div class="lesson-kicker" id="lessonKicker">ANATOMY LESSON</div><h2 id="lessonTitle">Organ lesson</h2><p class="lesson-intro" id="lessonIntro"></p><div class="lesson-grid"><article><h3 id="lessonFunctionLabel">Function</h3><p id="lessonFunction"></p></article><article><h3 id="lessonLocationLabel">Location</h3><p id="lessonLocation"></p></article><article><h3 id="lessonFactLabel">Did you know?</h3><p id="lessonFact"></p></article></div></section></div>
-<footer class="footer"><span>© 2026 NEXORA HUMAN ATLAS</span><span>EDUCATIONAL EXPERIENCE · 3D PREVIEW</span></footer>
+<footer class="footer"><span>© 2026 NEXORA HUMAN ATLAS · 3D MODEL DATA: Z-ANATOMY / BODYPARTS3D (CC BY-SA 4.0)</span><span>EDUCATIONAL EXPERIENCE · 3D PREVIEW</span></footer>
 </div><div class="toast" id="toast"></div>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
@@ -41,6 +41,83 @@
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {DRACOLoader} from 'three/addons/loaders/DRACOLoader.js';
+
+const dracoLoader=new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+const anatomyLoader=new GLTFLoader();
+anatomyLoader.setDRACOLoader(dracoLoader);
+const realModelSources={
+  skeleton:'skeletal',
+  muscular:'muscular',
+  circulatory:'cardiovascular',
+  joints:'joints',
+  lymphatic:'lymphatic'
+};
+const realModelCache=new Map();
+let anatomyDefinitions=null,anatomyLexicon=null;
+async function loadAnatomyTextData(){
+ if(anatomyDefinitions&&anatomyLexicon)return;
+ const base='https://raw.githubusercontent.com/nqwrc/3d-anatomy/master/public/data/';
+ const [d,l]=await Promise.all([fetch(base+'definitions.json'),fetch(base+'lexicon.json')]);
+ if(!d.ok||!l.ok)throw new Error('Anatomy reference data could not be loaded');
+ [anatomyDefinitions,anatomyLexicon]=await Promise.all([d.json(),l.json()]);
+}
+async function loadRealModel(systemKey){
+ const modelId=realModelSources[systemKey];
+ if(!modelId)return false;
+ if(realModelCache.has(systemKey)){
+  realModelCache.get(systemKey).visible=true;
+  return true;
+ }
+ toast(english?'Loading detailed 3D anatomy…':'جارٍ تحميل النموذج التشريحي المفصل…');
+ const url='https://raw.githubusercontent.com/nqwrc/3d-anatomy/master/public/models/'+modelId+'.glb';
+ const gltf=await anatomyLoader.loadAsync(url);
+ const model=gltf.scene;
+ model.name='NEXORA_REAL_'+modelId;
+ model.traverse(obj=>{
+  if(obj.isMesh){
+   obj.userData.nexoraModel=true;
+   obj.frustumCulled=true;
+   if(obj.userData.za_name)obj.userData.anatomyName=obj.userData.za_name;
+  }
+ });
+ const bounds=new THREE.Box3().setFromObject(model);
+ const size=bounds.getSize(new THREE.Vector3());
+ const center=bounds.getCenter(new THREE.Vector3());
+ if(size.y>0){
+  model.scale.setScalar(3.9/size.y);
+  model.position.set(-center.x*model.scale.x,-center.y*model.scale.y,-center.z*model.scale.z);
+ }
+ const targetGroup=groups[systemKey];
+ // Keep invisible selection hotspots; hide the old illustrative geometry.
+ targetGroup.children.forEach(child=>{if(!child.userData.anatomy)child.visible=false;});
+ targetGroup.add(model);
+ realModelCache.set(systemKey,model);
+ loadAnatomyTextData().catch(()=>{});
+ toast(english?'Detailed anatomical model loaded':'تم تحميل النموذج التشريحي المفصل');
+ return true;
+}
+function showRealStructure(mesh){
+ const raw=mesh.userData.anatomyName||mesh.userData.za_name||mesh.name||'Anatomical structure';
+ const name=String(raw).replace(/_/g,' ').replace(/\.[lr]$/,'');
+ const variants=[raw,String(raw).replace(/\.[lr]$/,''),name];
+ let description='',latin='';
+ for(const key of variants){
+  if(!description&&anatomyDefinitions?.[key])description=anatomyDefinitions[key];
+  if(!latin&&anatomyLexicon?.[key]?.la)latin=anatomyLexicon[key].la;
+ }
+ description=(description|| (english?'Detailed 3D anatomical structure from the Z-Anatomy atlas.':'تركيب تشريحي ثلاثي الأبعاد من أطلس Z-Anatomy.')).split(' https://en.wikipedia.org')[0].replace(/===/g,'').trim().slice(0,650);
+ document.querySelector('#organName').textContent=name;
+ document.querySelector('#organLatin').textContent=latin||'Z-Anatomy · Terminologia Anatomica';
+ document.querySelector('#organDescription').textContent=description;
+ document.querySelector('#organIcon').textContent='🔬';
+ document.querySelector('#organTag').textContent=english?'ANATOMICAL MODEL':'تركيب تشريحي';
+ document.querySelector('#detailsHint').textContent=english?'Selected 3D anatomical structure':'التركيب المحدد من النموذج الحقيقي';
+ toast(english?'Selected: '+name:'تم تحديد: '+name);
+}
+
 const canvas=document.querySelector('#stage'),scene=new THREE.Scene();scene.background=null;
 const camera=new THREE.PerspectiveCamera(34,1,.1,100);camera.position.set(0,1.35,8.7);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -124,7 +201,7 @@ respiratory:{ar:['الجهاز التنفسي','Respiratory system','يسمح ا
 digestive:{ar:['الجهاز الهضمي','Digestive system','يحوّل الطعام إلى عناصر غذائية قابلة للامتصاص، ويشمل المعدة والأمعاء وأعضاء مساعدة مثل الكبد.'],en:['Digestive system','Systema digestorium','The digestive system breaks food down into absorbable nutrients. It includes the stomach, intestines and accessory organs such as the liver.'],icon:'〰️',tag:'DIGESTIVE'},
 nervous:{ar:['الجهاز العصبي','Nervous system','ينسق الجهاز العصبي وظائف الجسم ويستقبل المعلومات الحسية ويعالجها، ويتكون من الدماغ والحبل الشوكي والأعصاب.'],en:['Nervous system','Systema nervosum','The nervous system coordinates body functions, receives sensory information and processes it through the brain, spinal cord and nerves.'],icon:'🧠',tag:'NERVOUS'}
 };
-function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key);document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;}
+function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key);document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;if(realModelSources[key])loadRealModel(key).catch(e=>{console.error('NEXORA model load failed',e);toast(english?'Model could not be loaded. Check your connection.':'تعذر تحميل النموذج. تحقق من اتصال الإنترنت.');});}
 document.querySelectorAll('.system').forEach(b=>b.addEventListener('click',()=>setSystem(b.dataset.system)));
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerDown=null;
 canvas.addEventListener('pointerdown',event=>{pointerDown={x:event.clientX,y:event.clientY};});
@@ -136,6 +213,8 @@ canvas.addEventListener('click',event=>{
   raycaster.setFromCamera(pointer,camera);
   const active=groups[selected];
   const hits=raycaster.intersectObjects(active.children,true);
+  const detailedHit=hits.find(x=>x.object.userData.nexoraModel);
+  if(detailedHit){showRealStructure(detailedHit.object);return;}
   const hit=hits.find(x=>x.object.userData.anatomy);
   if(!hit)return;
   const d=hit.object.userData.data;
