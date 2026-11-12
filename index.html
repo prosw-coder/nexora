@@ -65,6 +65,31 @@ for(const s of [-1,1]){sphere(groups.respiratory,lung,[s*.25,1.72,.23],[.22,.38,
 cyl(groups.respiratory,nerve,[0,2.28,.2],[0,1.95,.2],.055,.055);
 sphere(groups.digestive,organ,[0,1.17,.31],[.19,.21,.12]);sphere(groups.digestive,dark,[.2,1.33,.2],[.25,.13,.1]);for(let i=0;i<4;i++){const y=.88-i*.09;const curve=sphere(groups.digestive,lung,[0,y,.34],[.22,.035,.055]);curve.rotation.z=i%2?.12:-.12}
 cyl(groups.nervous,nerve,[0,2.58,.02],[0,-.1,.05],.035,.025);sphere(groups.nervous,nerve,[0,2.61,.03],[.23,.23,.2]);for(const s of [-1,1]){cyl(groups.nervous,nerve,[0,1.5,.08],[s*.8,1.1,.08],.015,.01);cyl(groups.nervous,nerve,[0,.4,.08],[s*.33,-2.2,.08],.014,.009)}
+// Invisible anatomical hit areas make the visible structures selectable.
+const hitMaterial=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});
+function hotspot(group, system, key, position, scale, data){
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,18,14),hitMaterial);
+  mesh.position.set(...position);mesh.scale.set(...scale);
+  mesh.userData={anatomy:true,system,key,data};group.add(mesh);
+}
+const anatomy={
+  heart:{ar:["القلب","Heart","عضو عضلي أجوف يضخ الدم إلى الرئتين وبقية أجزاء الجسم. يتكون من أربع حجرات."],en:["Heart","Cor","A hollow muscular organ that pumps blood to the lungs and the rest of the body. It has four chambers."],icon:"🫀"},
+  lungs:{ar:["الرئتان","Lungs","عضوان إسفنجيان يحدث فيهما تبادل الغازات؛ ينتقل الأكسجين إلى الدم ويخرج ثاني أكسيد الكربون."],en:["Lungs","Pulmones","Spongy organs where gas exchange occurs: oxygen enters the blood and carbon dioxide is removed."],icon:"🫁"},
+  brain:{ar:["الدماغ","Brain","مركز التحكم الرئيس في الجهاز العصبي؛ يعالج المعلومات وينظم كثيرًا من وظائف الجسم."],en:["Brain","Encephalon","The main control center of the nervous system, processing information and regulating many body functions."],icon:"🧠"},
+  stomach:{ar:["المعدة","Stomach","عضو عضلي يخلط الطعام بالعصارات الهضمية ويساعد على بدء هضم البروتينات."],en:["Stomach","Gaster","A muscular organ that mixes food with digestive juices and helps begin protein digestion."],icon:"〰️"},
+  skeleton:{ar:["الهيكل العظمي","Skeleton","يوفر الدعامة والحماية ويسهم في الحركة، كما يحتوي نخاع العظم الذي ينتج خلايا الدم."],en:["Skeleton","Systema skeletale","Provides support and protection, contributes to movement, and houses marrow that produces blood cells."],icon:"🦴"},
+  muscles:{ar:["العضلات الهيكلية","Skeletal muscles","تتصل كثير من العضلات بالعظام وتولد القوة اللازمة للحركة والمحافظة على وضعية الجسم."],en:["Skeletal muscles","Musculi skeletales","Many skeletal muscles attach to bones and generate the force needed for movement and posture."],icon:"💪"}
+};
+hotspot(groups.all,"all","heart",[0,1.55,.42],[.27,.3,.24],anatomy.heart);
+hotspot(groups.all,"all","lungs",[0,1.73,.25],[.58,.48,.22],anatomy.lungs);
+hotspot(groups.all,"all","brain",[0,2.61,.08],[.3,.3,.24],anatomy.brain);
+hotspot(groups.all,"all","stomach",[0,1.15,.4],[.3,.3,.2],anatomy.stomach);
+hotspot(groups.skeleton,"skeleton","skeleton",[0,.2,.02],[.48,1.5,.3],anatomy.skeleton);
+hotspot(groups.muscular,"muscular","muscles",[0,1.25,.35],[.65,.95,.25],anatomy.muscles);
+hotspot(groups.circulatory,"circulatory","heart",[0,1.55,.5],[.23,.26,.2],anatomy.heart);
+hotspot(groups.respiratory,"respiratory","lungs",[0,1.72,.35],[.55,.48,.2],anatomy.lungs);
+hotspot(groups.digestive,"digestive","stomach",[0,1.15,.48],[.28,.27,.2],anatomy.stomach);
+hotspot(groups.nervous,"nervous","brain",[0,2.61,.25],[.28,.27,.2],anatomy.brain);
 // Make full-body groups visually distinct and selectable by system
 Object.entries(groups).forEach(([k,g])=>{if(k!=='all')g.visible=false});
 let selected='all',gender='male',english=false;
@@ -79,7 +104,27 @@ nervous:{ar:['الجهاز العصبي','Nervous system','ينسق الجهاز
 };
 function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key);document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;}
 document.querySelectorAll('.system').forEach(b=>b.addEventListener('click',()=>setSystem(b.dataset.system)));
-document.querySelectorAll('[data-gender]').forEach(b=>b.addEventListener('click',()=>{gender=b.dataset.gender;document.querySelectorAll('[data-gender]').forEach(x=>x.classList.toggle('active',x===b));toast(english?'The selected body model is a visual preview.':'تم اختيار النموذج؛ الاختلاف التشريحي التفصيلي قيد التطوير.');}));
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+canvas.addEventListener('click',event=>{
+  const rect=canvas.getBoundingClientRect();
+  pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
+  pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(pointer,camera);
+  const active=groups[selected];
+  const hits=raycaster.intersectObjects(active.children,true);
+  const hit=hits.find(x=>x.object.userData.anatomy);
+  if(!hit)return;
+  const d=hit.object.userData.data;
+  document.querySelector('#organName').textContent=d[english?'en':'ar'][0];
+  document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];
+  document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];
+  document.querySelector('#organIcon').textContent=d.icon;
+  document.querySelector('#organTag').textContent=english?'SELECTED ORGAN':'عضو محدد';
+  document.querySelector('#detailsHint').textContent=english?'Selected anatomical structure':'العضو الذي تم اختياره';
+  toast(english?'Selected: '+d[1][0]:'تم تحديد: '+d[0][0]);
+});
+
+document.querySelectorAll('[data-gender]').forEach(b=>b.addEventListener('click',()=>{gender=b.dataset.gender;document.querySelectorAll('[data-gender]').forEach(x=>x.classList.toggle('active',x===b));toast(english?'Male/female anatomical differences are not modeled yet.':'اختيار الجنس واجهة تمهيدية؛ الاختلافات التشريحية بين النموذجين لم تُنفذ بعد.');}));
 function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(canvas);resize();
 function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
 document.querySelector('#zoomIn').onclick=()=>camera.position.multiplyScalar(.88);document.querySelector('#zoomOut').onclick=()=>camera.position.multiplyScalar(1.12);document.querySelector('#home').onclick=()=>{camera.position.set(0,1.35,8.7);controls.target.set(0,.2,0)};document.querySelector('#reset').onclick=()=>{root.rotation.set(0,0,0);camera.position.set(0,1.35,8.7);controls.target.set(0,.2,0);setSystem('all')};
