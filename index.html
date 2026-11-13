@@ -206,9 +206,10 @@ nervous:{ar:['الجهاز العصبي','Nervous system','ينسق الجهاز
 joints:{ar:['المفاصل','Joints','تربط المفاصل العظام ببعضها وتسمح بالحركة مع توفير الثبات، وتختلف أشكالها ومدى حركتها بحسب موقعها ووظيفتها.'],en:['Joints','Articulationes','Joints connect bones and allow movement while providing stability. Their shape and range of motion vary by location and function.'],icon:'🦵',tag:'JOINTS'},
 lymphatic:{ar:['الجهاز اللمفاوي','Lymphatic system','يتكون من الأوعية والعقد اللمفاوية وأعضاء مناعية، ويساعد على إعادة السوائل إلى الدم والمساهمة في الدفاع المناعي.'],en:['Lymphatic system','Systema lymphoideum','The lymphatic system includes vessels, nodes and immune organs. It returns fluid to the bloodstream and contributes to immune defence.'],icon:'🫧',tag:'LYMPHATIC'}
 };
-// Dual-body comparison view with a translucent outer silhouette and skeletal layer.
+// Dual-body comparison stage: both figures remain independently selectable.
 const pairStage=new THREE.Group();pairStage.visible=false;root.add(pairStage);
-function makePairFigure(isFemale,x){
+let pairFigures=[];
+function makePairFigure(isFemale,x,systemKey='all'){
  const figure=new THREE.Group();
  const body=groups.all.clone(true);
  body.traverse(obj=>{
@@ -218,23 +219,24 @@ function makePairFigure(isFemale,x){
    obj.material.transparent=true;
    obj.material.opacity=.16;
    obj.material.depthWrite=false;
-   if(isFemale){
-    const y=obj.position.y;
-    const width=(y>-.05&&y<.55)?1.13:(y<-.35&&y>-1.5)?1.04:.96;
-    obj.scale.x*=width;
-   }
+   if(isFemale){const y=obj.position.y;const width=(y>-.05&&y<.55)?1.13:(y<-.35&&y>-1.5)?1.04:.96;obj.scale.x*=width;}
   }
  });
  const bones=groups.skeleton.clone(true);
  bones.traverse(obj=>{if(obj.isMesh){obj.material=obj.material.clone();obj.material.color.set('#c9dce9');obj.material.transparent=true;obj.material.opacity=.82;}});
  figure.add(body,bones);
- figure.scale.setScalar(.68);
- figure.position.x=x;
- pairStage.add(figure);
+ if(systemKey!=='all'&&systemKey!=='skeleton'){
+  const systemClone=groups[systemKey].clone(true);
+  systemClone.traverse(obj=>{
+   if(obj.userData.nexoraModelRoot)obj.visible=!isFemale;
+   if(isFemale&&obj.userData.nexoraPreviousVisible!==undefined&&!obj.userData.nexoraModel)obj.visible=obj.userData.nexoraPreviousVisible;
+  });
+  figure.add(systemClone);
+ }
+ figure.scale.setScalar(.68);figure.position.x=x;pairStage.add(figure);pairFigures.push(figure);
 }
-makePairFigure(false,-1.05);
-makePairFigure(true,1.05);
-function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key&&!(gender==="both"&&key==="all"));pairStage.visible=gender==="both"&&key==="all";document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;if(realModelSources[key]){const cached=realModelCache.get(key);if(gender==='female'){if(cached)cached.visible=false;groups[key].children.forEach(child=>{if(!child.userData.anatomy&&!child.userData.nexoraModel&&child.userData.nexoraPreviousVisible!==undefined)child.visible=child.userData.nexoraPreviousVisible;});document.querySelector('#detailsHint').textContent=english?'Male source atlas; illustrative preview shown for this selection.':'مصدر النموذج التفصيلي ذكوري؛ المعروض الآن رسم توضيحي.';}else if(cached){cached.visible=true;groups[key].children.forEach(child=>{if(!child.userData.anatomy&&!child.userData.nexoraModel&&!child.userData.nexoraModelRoot)child.visible=false;});}else loadRealModel(key).catch(e=>{console.error('NEXORA model load failed',e);toast(english?'Model could not be loaded. Check your connection.':'تعذر تحميل النموذج. تحقق من اتصال الإنترنت.');});}}
+function refreshPairFigures(systemKey=selected){pairStage.clear();pairFigures=[];makePairFigure(false,-1.05,systemKey);makePairFigure(true,1.05,systemKey);}
+function setSystem(key){selected=key;Object.entries(groups).forEach(([k,g])=>g.visible=k===key&&!(gender==="both"&&key==="all"));pairStage.visible=gender==="both";if(gender==="both")refreshPairFigures(key);document.querySelectorAll('.system').forEach(b=>b.classList.toggle('active',b.dataset.system===key));const d=info[key];document.querySelector('#currentSystem').textContent=d[english?'en':'ar'][0];document.querySelector('#organName').textContent=d[english?'en':'ar'][0];document.querySelector('#organLatin').textContent=d[english?'en':'ar'][1];document.querySelector('#organDescription').textContent=d[english?'en':'ar'][2];document.querySelector('#organIcon').textContent=d.icon;document.querySelector('#organTag').textContent=d.tag;if(realModelSources[key]){const cached=realModelCache.get(key);if(gender==='female'){if(cached)cached.visible=false;groups[key].children.forEach(child=>{if(!child.userData.anatomy&&!child.userData.nexoraModel&&child.userData.nexoraPreviousVisible!==undefined)child.visible=child.userData.nexoraPreviousVisible;});document.querySelector('#detailsHint').textContent=english?'Male source atlas; illustrative preview shown for this selection.':'مصدر النموذج التفصيلي ذكوري؛ المعروض الآن رسم توضيحي.';}else if(cached){cached.visible=true;groups[key].children.forEach(child=>{if(!child.userData.anatomy&&!child.userData.nexoraModel&&!child.userData.nexoraModelRoot)child.visible=false;});}else loadRealModel(key).catch(e=>{console.error('NEXORA model load failed',e);toast(english?'Model could not be loaded. Check your connection.':'تعذر تحميل النموذج. تحقق من اتصال الإنترنت.');});}}
 document.querySelectorAll('.system').forEach(b=>b.addEventListener('click',()=>setSystem(b.dataset.system)));
 const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerDown=null;
 canvas.addEventListener('pointerdown',event=>{pointerDown={x:event.clientX,y:event.clientY};});
