@@ -246,7 +246,7 @@ canvas.addEventListener('click',event=>{
   pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
   pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
   raycaster.setFromCamera(pointer,camera);
-  const active=(gender==="both"&&selected==="all")?pairStage:groups[selected];
+  const active=gender==="both"?pairStage:groups[selected];
   const hits=raycaster.intersectObjects(active.children,true);
   const detailedHit=hits.find(x=>x.object.userData.nexoraModel);
   if(detailedHit){showRealStructure(detailedHit.object);return;}
